@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Search, X, Filter } from "lucide-react";
 import { AuditTimeline } from "@/components/AuditTimeline";
-import { mockAuditEntries } from "@/lib/mock-data";
+import { useDemoData } from "@/lib/use-demo-data";
 
 const ACTION_GROUPS = [
   { label: "All", value: "all" },
@@ -17,11 +17,13 @@ const ACTION_GROUPS = [
 ];
 
 export default function AuditPage() {
+  const { data } = useDemoData();
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState("all");
+  const entries = data.auditEntries;
 
   const filtered = useMemo(() => {
-    return mockAuditEntries.filter((entry) => {
+    return entries.filter((entry) => {
       if (
         search &&
         !entry.actor.toLowerCase().includes(search.toLowerCase()) &&
@@ -37,7 +39,7 @@ export default function AuditPage() {
 
       return true;
     });
-  }, [search, actionFilter]);
+  }, [entries, search, actionFilter]);
 
   return (
     <div className="space-y-6">

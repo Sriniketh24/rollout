@@ -1,8 +1,8 @@
 # Rollout
 
-**A production-grade distributed feature flag and experimentation platform.**
+**A feature flag and experimentation platform built for resume-grade systems work.**
 
-Rollout is a LaunchDarkly/Optimizely-style system that enables teams to ship features safely, run A/B tests, and analyze impact — with sub-microsecond flag evaluation, streaming config propagation, Bayesian experiment analysis, and edge relay architecture.
+Rollout is a LaunchDarkly/Optimizely-style system for safely shipping features, running experiments, and analyzing impact. The live free deployment path uses `Vercel Hobby + Supabase Free`, while the repo also contains a deeper Go-based control plane and local multi-service architecture for systems-focused iteration.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -10,26 +10,26 @@ Rollout is a LaunchDarkly/Optimizely-style system that enables teams to ship fea
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
 │   ┌──────────┐    ┌──────────────────────────────────────────────┐      │
-│   │Dashboard │───▶│              Control Plane (Go)              │      │
-│   │(Next.js) │    │  REST API · RBAC · Audit · Kill Switches     │      │
-│   └──────────┘    └──────┬───────────┬──────────────┬────────────┘      │
-│                          │           │              │                    │
-│                          ▼           ▼              ▼                    │
-│                    ┌──────────┐ ┌─────────┐  ┌───────────┐             │
-│                    │ Postgres │ │  Redis   │  │   NATS    │             │
-│                    │ metadata │ │ hot cache│  │ event bus │             │
-│                    └──────────┘ └─────────┘  └─────┬─────┘             │
-│                                                     │                    │
-│   ┌──────────────────────┐              ┌──────────▼─────────┐         │
-│   │    Edge Relay (Go)   │◀─── SSE ───▶│  Ingest Worker (Go) │         │
-│   │ local eval · caching │              │ batch insert events │         │
-│   └──────────┬───────────┘              └──────────┬─────────┘         │
-│              │                                      │                    │
-│              ▼                                      ▼                    │
-│   ┌──────────────────┐                   ┌───────────────────┐         │
-│   │   Client SDKs    │                   │    ClickHouse     │         │
-│   │ TypeScript/Python │                   │    analytics      │         │
-│   └──────────────────┘                   └───────────────────┘         │
+│   │Dashboard │───▶│        Vercel App / Demo Data Proxy          │      │
+│   │(Next.js) │    │  UI · route handlers · deployable frontend   │      │
+│   └──────────┘    └──────────────────┬───────────────────────────┘      │
+│                                      │                                  │
+│                                      ▼                                  │
+│                           ┌──────────────────────┐                      │
+│                           │ Supabase Postgres    │                      │
+│                           │ schema · audit · exps│                      │
+│                           └──────────┬───────────┘                      │
+│                                      │                                  │
+│                                      ▼                                  │
+│                           ┌──────────────────────┐                      │
+│                           │ Supabase Edge Func   │                      │
+│                           │ read-only demo API   │                      │
+│                           └──────────────────────┘                      │
+│                                                                         │
+│   ┌──────────────────────────────────────────────────────────────────┐  │
+│   │ Local / next-phase architecture in repo: Go control plane, edge │  │
+│   │ relay, Redis/NATS/ClickHouse integrations, SDKs, load tests     │  │
+│   └──────────────────────────────────────────────────────────────────┘  │
 │                                                                         │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
@@ -65,9 +65,10 @@ All evaluations happen locally in-process — no network calls in the hot path.
 - **AI-Powered Insights** — Automated experiment recommendations (Ship / Investigate / Continue)
 
 ### Infrastructure
+- **Supabase-backed demo deployment** — Strictly free hosted path using Supabase Postgres plus an Edge Function-backed demo API
 - **Edge Relay** — Lightweight Go binary that caches rules locally and evaluates flags at the edge (< 5ms p99)
 - **Streaming Updates** — Server-Sent Events (SSE) for real-time config propagation to SDKs and relays
-- **Event Ingestion Pipeline** — Buffered batch inserts into ClickHouse via NATS, handling 10K+ events/sec
+- **Event Ingestion Pipeline** — Buffered batch inserts into ClickHouse via NATS for the local/distributed architecture track
 - **RBAC** — Role-based access control (Admin, Editor, Viewer) with JWT + API key authentication
 - **Audit Logging** — Complete history of every flag change, rollout, and experiment action
 - **Chaos Engineering** — Built-in fault injection: failure simulation, latency injection, stale cache emulation
@@ -86,12 +87,10 @@ All evaluations happen locally in-process — no network calls in the hot path.
 |-----------|-----------|
 | Backend | Go 1.23 (net/http, structured logging) |
 | Dashboard | Next.js 16, TypeScript, Tailwind CSS, Recharts |
-| Metadata Store | PostgreSQL 16 |
-| Hot Cache | Redis 7 |
-| Event Bus | NATS |
-| Analytics | ClickHouse |
+| Hosted Data Plane | Supabase Postgres + Supabase Edge Functions |
+| Local Infra Track | PostgreSQL, Redis, NATS, ClickHouse |
 | Infrastructure | Docker Compose, GitHub Actions |
-| Deployment | Fly.io (Go services), Vercel (dashboard) |
+| Deployment | Vercel Hobby + Supabase Free |
 
 ## Project Structure
 
@@ -122,9 +121,13 @@ rollout/
 ├── sdk/
 │   ├── typescript/         # TypeScript SDK with local evaluation
 │   └── python/             # Python SDK with threading support
+├── supabase/
+│   ├── functions/          # Supabase Edge Function used by the free hosted demo
+│   ├── migrations/         # Hosted Postgres schema for the free deployment
+│   └── seed.sql            # Deterministic demo dataset for the hosted path
 ├── migrations/             # PostgreSQL + ClickHouse schemas
 ├── tests/load/             # Load testing suite
-├── deployments/            # Docker and Fly.io configs
+├── deployments/            # Docker configs for the local/distributed stack
 ├── .github/workflows/      # CI pipeline + GitOps sync
 ├── rollout.yaml            # Example GitOps flag configuration
 └── docker-compose.yml      # Full local development stack
@@ -137,6 +140,23 @@ rollout/
 - Node.js 20+
 - Docker & Docker Compose
 
+### Free hosted deployment
+
+- Dashboard: Vercel Hobby
+- Data and demo API: Supabase Free
+- Current Supabase demo function: `https://wvfosrbrbkqugrkpunhk.supabase.co/functions/v1/rollout-data`
+- Production dashboard: `https://dashboard-rho-roan.vercel.app`
+
+### Rebuild the hosted demo data
+
+```bash
+# Apply the Supabase schema tracked in this repo
+supabase db push
+
+# Seed the deterministic demo project
+psql "$SUPABASE_DB_URL" -f supabase/seed.sql
+```
+
 ### Run locally
 
 ```bash
@@ -147,7 +167,7 @@ cd rollout
 # Start all services
 docker compose up -d
 
-# The services are now running:
+# For the local distributed stack:
 #   Control Plane API:  http://localhost:8080
 #   Edge Relay:         http://localhost:8081
 #   Dashboard:          http://localhost:3000

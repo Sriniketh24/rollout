@@ -5,25 +5,27 @@ import Link from "next/link";
 import { Search, Plus, Filter, X } from "lucide-react";
 import { FlagCard } from "@/components/FlagCard";
 import { Badge } from "@/components/Badge";
-import { mockFlags } from "@/lib/mock-data";
 import type { FlagType } from "@/lib/types";
+import { useDemoData } from "@/lib/use-demo-data";
 
 const FLAG_TYPES: FlagType[] = ["boolean", "string", "number", "json"];
 
 export default function FlagsPage() {
+  const { data } = useDemoData();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<FlagType | "all">("all");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
+  const flags = data.flags;
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
-    mockFlags.forEach((f) => f.tags.forEach((t) => tags.add(t)));
+    flags.forEach((flag) => flag.tags.forEach((tag) => tags.add(tag)));
     return Array.from(tags).sort();
-  }, []);
+  }, [flags]);
 
   const filtered = useMemo(() => {
-    return mockFlags.filter((flag) => {
+    return flags.filter((flag) => {
       if (!showArchived && flag.archived) return false;
       if (
         search &&
@@ -36,7 +38,7 @@ export default function FlagsPage() {
       if (tagFilter && !flag.tags.includes(tagFilter)) return false;
       return true;
     });
-  }, [search, typeFilter, tagFilter, showArchived]);
+  }, [flags, search, typeFilter, tagFilter, showArchived]);
 
   return (
     <div className="space-y-6">

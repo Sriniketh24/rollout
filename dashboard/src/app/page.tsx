@@ -10,49 +10,46 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { AuditTimeline } from "@/components/AuditTimeline";
-import {
-  mockFlags,
-  mockExperiments,
-  mockEnvironments,
-  mockAuditEntries,
-} from "@/lib/mock-data";
-
-const stats = [
-  {
-    label: "Feature Flags",
-    value: mockFlags.length,
-    icon: Flag,
-    color: "text-blue-400",
-    bg: "bg-blue-500/10",
-    href: "/flags",
-  },
-  {
-    label: "Active Experiments",
-    value: mockExperiments.filter((e) => e.status === "running").length,
-    icon: FlaskConical,
-    color: "text-purple-400",
-    bg: "bg-purple-500/10",
-    href: "/experiments",
-  },
-  {
-    label: "Environments",
-    value: mockEnvironments.length,
-    icon: Globe,
-    color: "text-emerald-400",
-    bg: "bg-emerald-500/10",
-    href: "/environments",
-  },
-  {
-    label: "Events (24h)",
-    value: mockAuditEntries.length,
-    icon: Activity,
-    color: "text-yellow-400",
-    bg: "bg-yellow-500/10",
-    href: "/audit",
-  },
-];
+import { useDemoData } from "@/lib/use-demo-data";
 
 export default function DashboardPage() {
+  const { data } = useDemoData();
+  const { flags, experiments, environments, auditEntries } = data;
+  const stats = [
+    {
+      label: "Feature Flags",
+      value: flags.length,
+      icon: Flag,
+      color: "text-blue-400",
+      bg: "bg-blue-500/10",
+      href: "/flags",
+    },
+    {
+      label: "Active Experiments",
+      value: experiments.filter((experiment) => experiment.status === "running").length,
+      icon: FlaskConical,
+      color: "text-purple-400",
+      bg: "bg-purple-500/10",
+      href: "/experiments",
+    },
+    {
+      label: "Environments",
+      value: environments.length,
+      icon: Globe,
+      color: "text-emerald-400",
+      bg: "bg-emerald-500/10",
+      href: "/environments",
+    },
+    {
+      label: "Events (24h)",
+      value: auditEntries.length,
+      icon: Activity,
+      color: "text-yellow-400",
+      bg: "bg-yellow-500/10",
+      href: "/audit",
+    },
+  ];
+
   return (
     <div className="space-y-8">
       {/* Header */}
@@ -101,7 +98,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {mockFlags.slice(0, 4).map((flag) => {
+            {flags.slice(0, 4).map((flag) => {
               const prodEnv = flag.environments["env-3"];
               const isEnabled = prodEnv?.enabled ?? false;
               return (
@@ -153,7 +150,7 @@ export default function DashboardPage() {
             </Link>
           </div>
           <div className="space-y-3">
-            {mockExperiments.slice(0, 4).map((exp) => {
+            {experiments.slice(0, 4).map((exp) => {
               const statusVariant =
                 exp.status === "running"
                   ? "success"
@@ -196,7 +193,7 @@ export default function DashboardPage() {
             View full log
           </Link>
         </div>
-        <AuditTimeline entries={mockAuditEntries.slice(0, 5)} />
+        <AuditTimeline entries={auditEntries.slice(0, 5)} />
       </div>
     </div>
   );

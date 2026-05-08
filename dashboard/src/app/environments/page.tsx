@@ -12,18 +12,20 @@ import {
   X,
 } from "lucide-react";
 import { Badge } from "@/components/Badge";
-import { mockEnvironments, mockFlags } from "@/lib/mock-data";
 import type { Environment } from "@/lib/types";
+import { useDemoData } from "@/lib/use-demo-data";
 
 export default function EnvironmentsPage() {
-  const [environments, setEnvironments] =
-    useState<Environment[]>(mockEnvironments);
+  const { data } = useDemoData();
+  const [draftEnvironments, setDraftEnvironments] =
+    useState<Environment[] | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [newName, setNewName] = useState("");
   const [newKey, setNewKey] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
   const [newDescription, setNewDescription] = useState("");
   const [newProduction, setNewProduction] = useState(false);
+  const environments = draftEnvironments ?? data.environments;
 
   function handleCreate(e: React.FormEvent) {
     e.preventDefault();
@@ -39,7 +41,7 @@ export default function EnvironmentsPage() {
       projectId: "proj-1",
       order: environments.length,
     };
-    setEnvironments([...environments, env]);
+    setDraftEnvironments([...(draftEnvironments ?? data.environments), env]);
     setShowCreate(false);
     setNewName("");
     setNewKey("");
@@ -49,9 +51,7 @@ export default function EnvironmentsPage() {
   }
 
   function getFlagCount(envId: string) {
-    return mockFlags.filter(
-      (f) => f.environments[envId]?.enabled
-    ).length;
+    return data.flags.filter((flag) => flag.environments[envId]?.enabled).length;
   }
 
   const envIcons: Record<string, React.ElementType> = {

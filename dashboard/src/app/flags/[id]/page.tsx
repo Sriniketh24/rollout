@@ -15,8 +15,15 @@ import { Badge } from "@/components/Badge";
 import { RolloutSlider } from "@/components/RolloutSlider";
 import { KillSwitchButton } from "@/components/KillSwitchButton";
 import { TargetingRuleEditor } from "@/components/TargetingRuleEditor";
-import { mockFlags, mockEnvironments } from "@/lib/mock-data";
 import type { TargetingRule } from "@/lib/types";
+import { useDemoData } from "@/lib/use-demo-data";
+
+interface EnvironmentDraft {
+  enabled: boolean;
+  rollout: number;
+  killActive: boolean;
+  rules: TargetingRule[];
+}
 
 export default function FlagDetailPage({
   params,
@@ -24,30 +31,46 @@ export default function FlagDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const flag = mockFlags.find((f) => f.id === id) ?? mockFlags[0];
+  const { data } = useDemoData();
+  const flag = data.flags.find((entry) => entry.id === id) ?? data.flags[0];
 
   const [selectedEnv, setSelectedEnv] = useState("env-3");
-  const envConfig = flag.environments[selectedEnv];
-  const envMeta = mockEnvironments.find((e) => e.id === selectedEnv);
+  const [draftsByEnvironment, setDraftsByEnvironment] = useState<
+    Record<string, EnvironmentDraft>
+  >({});
 
-  const [enabled, setEnabled] = useState(envConfig?.enabled ?? false);
-  const [rollout, setRollout] = useState(envConfig?.rolloutPercentage ?? 0);
-  const [killActive, setKillActive] = useState(
-    envConfig?.killSwitchActive ?? false
+  const resolvedSelectedEnv =
+    flag?.environments[selectedEnv] != null
+      ? selectedEnv
+      : data.environments[0]?.id ?? "";
+  const envConfig = flag?.environments[resolvedSelectedEnv];
+  const envMeta = data.environments.find(
+    (environment) => environment.id === resolvedSelectedEnv
   );
-  const [rules, setRules] = useState<TargetingRule[]>(
-    envConfig?.targetingRules ?? []
-  );
+
+  function baseDraft(): EnvironmentDraft {
+    return {
+      enabled: envConfig?.enabled ?? false,
+      rollout: envConfig?.rolloutPercentage ?? 0,
+      killActive: envConfig?.killSwitchActive ?? false,
+      rules: envConfig?.targetingRules ?? [],
+    };
+  }
+
+  const activeDraft = draftsByEnvironment[resolvedSelectedEnv] ?? baseDraft();
+
+  function updateDraft(partial: Partial<EnvironmentDraft>) {
+    setDraftsByEnvironment((current) => ({
+      ...current,
+      [resolvedSelectedEnv]: {
+        ...(current[resolvedSelectedEnv] ?? baseDraft()),
+        ...partial,
+      },
+    }));
+  }
 
   function handleEnvSwitch(envId: string) {
     setSelectedEnv(envId);
-    const cfg = flag.environments[envId];
-    if (cfg) {
-      setEnabled(cfg.enabled);
-      setRollout(cfg.rolloutPercentage);
-      setKillActive(cfg.killSwitchActive ?? false);
-      setRules(cfg.targetingRules);
-    }
   }
 
   return (
@@ -107,7 +130,7 @@ export default function FlagDetailPage({
 
       {/* Environment tabs */}
       <div className="flex gap-2 border-b border-zinc-800 pb-0">
-        {mockEnvironments.map((env) => (
+        {data.environments.map((env) => (
           <button
             key={env.id}
             onClick={() => handleEnvSwitch(env.id)}
@@ -152,16 +175,16 @@ export default function FlagDetailPage({
                 <div className="flex items-center gap-4">
                   <KillSwitchButton
                     flagName={flag.name}
-                    environmentName={envMeta?.name ?? selectedEnv}
-                    isActive={killActive}
-                    onActivate={() => setKillActive(true)}
-                    onDeactivate={() => setKillActive(false)}
+                    environmentName={envMeta?.name ?? resolvedSelectedEnv}
+                    isActive={activeDraft.killActive}
+                    onActivate={() => updateDraft({ killActive: true })}
+                    onDeactivate={() => updateDraft({ killActive: false })}
                   />
                   <button
-                    onClick={() => setEnabled(!enabled)}
+                    onClick={() => updateDraft({ enabled: !activeDraft.enabled })}
                     className="transition-colors"
                   >
-                    {enabled ? (
+                    {activeDraft.enabled ? (
                       <ToggleRight className="h-10 w-10 text-emerald-500" />
                     ) : (
                       <ToggleLeft className="h-10 w-10 text-zinc-500" />
@@ -170,7 +193,7 @@ export default function FlagDetailPage({
                 </div>
               </div>
 
-              {killActive && (
+              {activeDraft.killActive && (
                 <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-300">
                   Kill switch is active. All users are receiving the off
                   variation.
@@ -184,9 +207,9 @@ export default function FlagDetailPage({
                 Rollout Percentage
               </h2>
               <RolloutSlider
-                value={rollout}
-                onChange={setRollout}
-                disabled={!enabled || killActive}
+                value={activeDraft.rollout}
+                onChange={(rollout) => updateDraft({ rollout })}
+                disabled={!activeDraft.enabled || activeDraft.killActive}
               />
             </div>
 
@@ -199,9 +222,9 @@ export default function FlagDetailPage({
                 Define rules to serve specific variations to targeted users
               </p>
               <TargetingRuleEditor
-                rules={rules}
+                rules={activeDraft.rules}
                 variations={flag.variations}
-                onChange={setRules}
+                onChange={(rules) => updateDraft({ rules })}
               />
             </div>
           </div>
@@ -245,7 +268,7 @@ export default function FlagDetailPage({
                 All Environments
               </h3>
               <div className="space-y-2">
-                {mockEnvironments.map((env) => {
+                {data.environments.map((env) => {
                   const cfg = flag.environments[env.id];
                   return (
                     <div
@@ -289,13 +312,13 @@ export default function FlagDetailPage({
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Rules</dt>
                   <dd className="text-zinc-300">
-                    {envConfig.targetingRules.length}
+                    {activeDraft.rules.length}
                   </dd>
                 </div>
                 <div className="flex justify-between">
                   <dt className="text-zinc-500">Kill switch</dt>
                   <dd>
-                    {killActive ? (
+                    {activeDraft.killActive ? (
                       <Badge variant="danger">active</Badge>
                     ) : (
                       <span className="text-zinc-300">inactive</span>

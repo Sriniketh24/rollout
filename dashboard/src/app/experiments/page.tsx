@@ -11,8 +11,8 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { Badge } from "@/components/Badge";
-import { mockExperiments } from "@/lib/mock-data";
 import type { ExperimentStatus } from "@/lib/types";
+import { useDemoData } from "@/lib/use-demo-data";
 
 const STATUS_FILTERS: { value: ExperimentStatus | "all"; label: string }[] = [
   { value: "all", label: "All" },
@@ -41,14 +41,16 @@ function getStatusConfig(status: ExperimentStatus) {
 }
 
 export default function ExperimentsPage() {
+  const { data } = useDemoData();
   const [statusFilter, setStatusFilter] = useState<ExperimentStatus | "all">(
     "all"
   );
+  const experiments = data.experiments;
 
   const filtered = useMemo(() => {
-    if (statusFilter === "all") return mockExperiments;
-    return mockExperiments.filter((e) => e.status === statusFilter);
-  }, [statusFilter]);
+    if (statusFilter === "all") return experiments;
+    return experiments.filter((experiment) => experiment.status === statusFilter);
+  }, [experiments, statusFilter]);
 
   return (
     <div className="space-y-6">

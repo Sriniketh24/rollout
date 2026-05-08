@@ -14,7 +14,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { ExperimentChart } from "@/components/ExperimentChart";
-import { mockExperiments, mockExperimentResults } from "@/lib/mock-data";
+import { fallbackDemoDataset } from "@/lib/demo-dataset";
+import { useDemoData } from "@/lib/use-demo-data";
 
 export default function ExperimentDetailPage({
   params,
@@ -22,10 +23,14 @@ export default function ExperimentDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const { data } = useDemoData();
   const experiment =
-    mockExperiments.find((e) => e.id === id) ?? mockExperiments[0];
+    data.experiments.find((entry) => entry.id === id) ?? data.experiments[0];
 
-  const results = mockExperimentResults;
+  const results =
+    data.experimentResultsById[id] ??
+    data.experimentResultsById[experiment?.id ?? ""] ??
+    fallbackDemoDataset.experimentResultsById["exp-2"];
 
   const statusVariant =
     experiment.status === "running"
