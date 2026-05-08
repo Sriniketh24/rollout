@@ -1,0 +1,30 @@
+.git
+.github
+.DS_Store
+
+# Local build/test outputs
+bin
+coverage.out
+benchmark.txt
+*.prof
+*.test
+rollout-server
+rollout-relay
+rollout-ingest
+rollout-cli
+
+# Node artifacts from the nested dashboard app
+dashboard/node_modules
+dashboard/.next
+dashboard/out
+dashboard/dist
+dashboard/*.tsbuildinfo
+
+# Python caches
+__pycache__
+*.py[cod]
+
+# Local config and secrets
+.env
+.env.*
+docker-compose.override.yml
