@@ -500,6 +500,10 @@ func (s *Store) CreateUser(ctx context.Context, u *models.User) error {
 	).Scan(&u.ID, &u.CreatedAt)
 }
 
+func (s *Store) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	return s.GetUser(ctx, id)
+}
+
 func (s *Store) GetUser(ctx context.Context, id string) (*models.User, error) {
 	u := &models.User{}
 	err := s.pool.QueryRow(ctx,
