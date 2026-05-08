@@ -1,0 +1,26 @@
+app = "rollout-relay"
+primary_region = "iad"
+
+[build]
+  dockerfile = "../../deployments/docker/Dockerfile.relay"
+
+[env]
+  RELAY_PORT = "8081"
+  SYNC_INTERVAL = "10s"
+
+[http_service]
+  internal_port = 8081
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+
+[[http_service.checks]]
+  grace_period = "10s"
+  interval = "30s"
+  method = "GET"
+  path = "/health/live"
+  timeout = "5s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"

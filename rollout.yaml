@@ -1,0 +1,52 @@
+# Rollout GitOps Configuration
+# This file declares the desired state of feature flags.
+# Run `rollout sync` to apply, or `rollout diff` to preview changes.
+
+project: my-project
+environment: production
+
+flags:
+  - key: dark-mode
+    enabled: true
+    type: boolean
+    rollout:
+      percentage: 50
+      bucket_by: user_id
+    targeting:
+      - attribute: country
+        operator: in
+        values: [US, CA, GB]
+        variation: true
+
+  - key: new-checkout
+    enabled: false
+    type: boolean
+
+  - key: pricing-v2
+    enabled: true
+    type: json
+    rollout:
+      percentage: 20
+      bucket_by: org_id
+    targeting:
+      - attribute: plan
+        operator: in
+        values: [enterprise, business]
+        variation: true
+      - attribute: country
+        operator: in
+        values: [US]
+        variation: true
+
+  - key: max-upload-size
+    enabled: true
+    type: number
+    targeting:
+      - attribute: plan
+        operator: eq
+        values: [enterprise]
+        variation: 1073741824
+      - attribute: plan
+        operator: eq
+        values: [pro]
+        variation: 536870912

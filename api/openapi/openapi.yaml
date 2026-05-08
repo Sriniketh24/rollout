@@ -1,0 +1,238 @@
+openapi: 3.1.0
+info:
+  title: Rollout API
+  description: Distributed feature flag and experimentation platform
+  version: 0.1.0
+  contact:
+    name: Sriniketh
+    url: https://github.com/Sriniketh24/rollout
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      tags: [Health]
+      responses:
+        "200":
+          description: Service health status
+
+  /api/v1/projects:
+    get:
+      summary: List projects
+      tags: [Projects]
+      security: [BearerAuth: [], ApiKeyAuth: []]
+      responses:
+        "200":
+          description: List of projects
+    post:
+      summary: Create project
+      tags: [Projects]
+      security: [BearerAuth: [], ApiKeyAuth: []]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                key: { type: string }
+              required: [name, key]
+      responses:
+        "201":
+          description: Project created
+
+  /api/v1/projects/{projectID}/flags:
+    get:
+      summary: List flags
+      tags: [Flags]
+      parameters:
+        - name: projectID
+          in: path
+          required: true
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: tag
+          in: query
+          schema: { type: string }
+      responses:
+        "200":
+          description: List of flags
+    post:
+      summary: Create flag
+      tags: [Flags]
+      parameters:
+        - name: projectID
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                key: { type: string }
+                name: { type: string }
+                type: { type: string, enum: [boolean, string, number, json] }
+                description: { type: string }
+                default_value: {}
+                tags: { type: array, items: { type: string } }
+              required: [key, name, type]
+      responses:
+        "201":
+          description: Flag created
+
+  /api/v1/projects/{projectID}/flags/{flagKey}:
+    get:
+      summary: Get flag
+      tags: [Flags]
+      responses:
+        "200":
+          description: Flag details
+    put:
+      summary: Update flag
+      tags: [Flags]
+      responses:
+        "200":
+          description: Flag updated
+    delete:
+      summary: Delete flag
+      tags: [Flags]
+      responses:
+        "200":
+          description: Flag deleted
+
+  /api/v1/projects/{projectID}/flags/{flagKey}/toggle:
+    post:
+      summary: Toggle flag
+      tags: [Flags]
+      responses:
+        "200":
+          description: Flag toggled
+
+  /api/v1/projects/{projectID}/flags/{flagKey}/kill:
+    post:
+      summary: Activate kill switch
+      tags: [Flags]
+      responses:
+        "200":
+          description: Kill switch activated
+
+  /api/v1/projects/{projectID}/evaluate:
+    post:
+      summary: Evaluate all flags
+      tags: [Evaluation]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                environment_id: { type: string }
+                context:
+                  type: object
+                  properties:
+                    key: { type: string }
+                    attributes: { type: object }
+      responses:
+        "200":
+          description: All flag evaluations
+
+  /api/v1/projects/{projectID}/experiments:
+    get:
+      summary: List experiments
+      tags: [Experiments]
+      responses:
+        "200":
+          description: List of experiments
+    post:
+      summary: Create experiment
+      tags: [Experiments]
+      responses:
+        "201":
+          description: Experiment created
+
+  /api/v1/projects/{projectID}/experiments/{experimentID}/results:
+    get:
+      summary: Get experiment results (Bayesian analysis)
+      tags: [Experiments]
+      responses:
+        "200":
+          description: Experiment results with Bayesian analysis
+
+  /api/v1/events/exposures:
+    post:
+      summary: Ingest exposure events
+      tags: [Events]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      flag_key: { type: string }
+                      environment_id: { type: string }
+                      user_key: { type: string }
+                      variation: {}
+                      reason: { type: string }
+                      timestamp: { type: string, format: date-time }
+      responses:
+        "202":
+          description: Events accepted
+
+  /api/v1/projects/{projectID}/stream/{envID}:
+    get:
+      summary: SSE stream for real-time flag updates
+      tags: [Streaming]
+      responses:
+        "200":
+          description: SSE event stream
+
+  /api/v1/chaos/stats:
+    get:
+      summary: Get chaos engineering statistics
+      tags: [Chaos]
+      responses:
+        "200":
+          description: Chaos stats
+
+  /api/v1/chaos/toggle:
+    post:
+      summary: Toggle chaos mode
+      tags: [Chaos]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled: { type: boolean }
+      responses:
+        "200":
+          description: Chaos mode toggled
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Rollout-Key

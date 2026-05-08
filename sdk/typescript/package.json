@@ -1,0 +1,28 @@
+{
+  "name": "@rollout/sdk",
+  "version": "1.0.0",
+  "description": "TypeScript client SDK for the Rollout feature flag platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "feature-flags",
+    "rollout",
+    "sdk",
+    "feature-toggle",
+    "ab-testing"
+  ],
+  "author": "Rollout",
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,41 @@
+name: Rollout GitOps Sync
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "rollout.yaml"
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    name: Sync Flag State
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26"
+
+      - name: Build Rollout CLI
+        run: go build -o rollout-cli ./cmd/rollout-cli
+
+      - name: Authenticate
+        run: |
+          ./rollout-cli login \
+            --api-key "${{ secrets.ROLLOUT_API_KEY }}" \
+            --url "${{ secrets.ROLLOUT_API_URL }}"
+
+      - name: Diff (dry run)
+        run: ./rollout-cli diff --file rollout.yaml
+
+      - name: Sync flags
+        run: ./rollout-cli sync --file rollout.yaml
+
+      - name: Verify health
+        run: ./rollout-cli health

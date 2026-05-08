@@ -1,0 +1,131 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rollout
+      POSTGRES_PASSWORD: rollout
+      POSTGRES_DB: rollout
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./migrations/001_initial.sql:/docker-entrypoint-initdb.d/001_initial.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rollout"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24-alpine
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+      - ./migrations/002_clickhouse.sql:/docker-entrypoint-initdb.d/002_clickhouse.sql
+    environment:
+      CLICKHOUSE_DB: rollout
+      CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: 1
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  nats:
+    image: nats:2-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--http_port", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8222/healthz"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  rollout-server:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.server
+    ports:
+      - "8080:8080"
+    environment:
+      SERVER_PORT: 8080
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_USER: rollout
+      POSTGRES_PASSWORD: rollout
+      POSTGRES_DB: rollout
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_DB: rollout
+      NATS_URL: nats://nats:4222
+      JWT_SECRET: dev-secret-change-in-production
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  rollout-relay:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.relay
+    ports:
+      - "8081:8081"
+    environment:
+      RELAY_PORT: 8081
+      UPSTREAM_URL: http://rollout-server:8080
+      SYNC_INTERVAL: 10s
+    depends_on:
+      - rollout-server
+
+  rollout-ingest:
+    build:
+      context: .
+      dockerfile: deployments/docker/Dockerfile.ingest
+    environment:
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 9000
+      CLICKHOUSE_DB: rollout
+      NATS_URL: nats://nats:4222
+      BATCH_SIZE: 1000
+      FLUSH_INTERVAL: 5s
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+      nats:
+        condition: service_healthy
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    depends_on:
+      - rollout-server
+
+volumes:
+  postgres_data:
+  clickhouse_data:
