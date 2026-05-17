@@ -23,6 +23,12 @@ import type {
 
 type JsonRecord = Record<string, unknown>;
 
+const rolloutEdgeApiUrl =
+  process.env.NEXT_PUBLIC_ROLLOUT_EDGE_API_URL ??
+  "https://wvfosrbrbkqugrkpunhk.supabase.co/functions/v1/rollout-data";
+
+const guestTokenStorageKey = "rollout_guest_workspace_token";
+
 export interface CreateFlagInput {
   key: string;
   name: string;
@@ -268,14 +274,25 @@ export function useDemoData() {
   const [data, setData] = useState<DemoDataset>(fallbackDemoDataset);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [guestToken, setGuestToken] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return window.localStorage.getItem(guestTokenStorageKey);
+  });
 
   const isAuthenticated = Boolean(session && user);
+  const isGuest = Boolean(!isAuthenticated && guestToken);
 
   const loadDemo = useCallback(async () => {
-    const response = await fetch("/api/demo-data", { cache: "no-store" });
+    const response = await fetch(
+      guestToken ? rolloutEdgeApiUrl : "/api/demo-data",
+      {
+        cache: "no-store",
+        headers: guestToken ? { "x-rollout-guest-token": guestToken } : undefined,
+      }
+    );
     if (!response.ok) throw new Error("Unable to load public demo data");
     return (await response.json()) as DemoDataset;
-  }, []);
+  }, [guestToken]);
 
   const loadWorkspace = useCallback(async () => {
     const { data: projectId, error: workspaceError } = await supabase.rpc(
@@ -382,9 +399,76 @@ export function useDemoData() {
     [user?.email, user?.id]
   );
 
+  async function guestAction(action: string, payload?: unknown) {
+    if (!guestToken) {
+      throw new Error("Start an editable guest workspace first.");
+    }
+
+    const response = await fetch(rolloutEdgeApiUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action, token: guestToken, payload }),
+    });
+
+    const body = await response.json();
+    if (!response.ok) {
+      throw new Error(body.error ?? "Guest workspace request failed");
+    }
+
+    const nextData = body.dataset as DemoDataset;
+    startTransition(() => {
+      setData(nextData);
+    });
+    return nextData;
+  }
+
+  async function startGuestWorkspace() {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(rolloutEdgeApiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "create_guest_workspace" }),
+      });
+      const body = await response.json();
+      if (!response.ok) {
+        throw new Error(body.error ?? "Unable to start guest workspace");
+      }
+
+      window.localStorage.setItem(guestTokenStorageKey, body.token);
+      setGuestToken(body.token);
+      startTransition(() => {
+        setData(body.dataset as DemoDataset);
+      });
+    } catch (guestError) {
+      setError(
+        guestError instanceof Error
+          ? guestError.message
+          : "Unable to start guest workspace"
+      );
+      throw guestError;
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  function leaveGuestWorkspace() {
+    window.localStorage.removeItem(guestTokenStorageKey);
+    setGuestToken(null);
+    setData(fallbackDemoDataset);
+    void reload();
+  }
+
   async function createFlag(input: CreateFlagInput) {
+    if (isGuest) {
+      const nextData = await guestAction("create_flag", input);
+      const created = nextData.flags.find((flag) => flag.key === input.key);
+      return created?.id ?? nextData.flags[nextData.flags.length - 1]?.id ?? "";
+    }
+
     if (!isAuthenticated) {
-      throw new Error("Sign in to create persistent flags.");
+      throw new Error("Sign in or start an editable guest workspace first.");
     }
 
     const now = new Date().toISOString();
@@ -446,8 +530,13 @@ export function useDemoData() {
   }
 
   async function updateFlagEnvironment(input: UpdateFlagEnvironmentInput) {
+    if (isGuest) {
+      await guestAction("update_flag_environment", input);
+      return;
+    }
+
     if (!isAuthenticated) {
-      throw new Error("Sign in to edit persistent flags.");
+      throw new Error("Sign in or start an editable guest workspace first.");
     }
 
     const flag = data.flags.find((entry) => entry.id === input.flagId);
@@ -495,8 +584,16 @@ export function useDemoData() {
   }
 
   async function createEnvironment(input: CreateEnvironmentInput) {
+    if (isGuest) {
+      const nextData = await guestAction("create_environment", input);
+      const created = nextData.environments.find(
+        (environment) => environment.key === input.key
+      );
+      return created?.id ?? nextData.environments[nextData.environments.length - 1]?.id ?? "";
+    }
+
     if (!isAuthenticated) {
-      throw new Error("Sign in to create persistent environments.");
+      throw new Error("Sign in or start an editable guest workspace first.");
     }
 
     const { data: insertedEnvironment, error: environmentError } = await supabase
@@ -552,8 +649,11 @@ export function useDemoData() {
     isLoading: authLoading || isLoading,
     error,
     isAuthenticated,
-    isDemo: !isAuthenticated,
+    isGuest,
+    isDemo: !isAuthenticated && !isGuest,
     reload,
+    startGuestWorkspace,
+    leaveGuestWorkspace,
     createFlag,
     updateFlagEnvironment,
     createEnvironment,

@@ -5,10 +5,12 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Flag, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useDemoData } from "@/lib/use-demo-data";
 
 export default function LoginPage() {
   const router = useRouter();
   const { signIn, signUp, isConfigured } = useAuth();
+  const { startGuestWorkspace } = useDemoData();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -16,6 +18,7 @@ export default function LoginPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isStartingGuest, setIsStartingGuest] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -44,6 +47,24 @@ export default function LoginPage() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleGuestWorkspace() {
+    setError(null);
+    setMessage(null);
+    setIsStartingGuest(true);
+    try {
+      await startGuestWorkspace();
+      router.push("/");
+    } catch (guestError) {
+      setError(
+        guestError instanceof Error
+          ? guestError.message
+          : "Unable to start guest workspace"
+      );
+    } finally {
+      setIsStartingGuest(false);
     }
   }
 
@@ -145,6 +166,22 @@ export default function LoginPage() {
             {mode === "signin" ? "Sign in" : "Create workspace"}
           </button>
         </form>
+
+        <div className="my-5 flex items-center gap-3">
+          <div className="h-px flex-1 bg-zinc-800" />
+          <span className="text-xs text-zinc-500">or</span>
+          <div className="h-px flex-1 bg-zinc-800" />
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void handleGuestWorkspace()}
+          disabled={isStartingGuest}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-zinc-700 px-4 py-2.5 text-sm font-medium text-zinc-200 transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {isStartingGuest && <Loader2 className="h-4 w-4 animate-spin" />}
+          Continue with editable guest workspace
+        </button>
 
         <div className="mt-5 border-t border-zinc-800 pt-5 text-center text-sm text-zinc-400">
           {mode === "signin" ? (
