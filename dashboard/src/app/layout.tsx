@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Sidebar from "@/components/Sidebar";
+import { AuthProvider } from "@/lib/auth-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,10 +16,12 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full bg-zinc-950 text-zinc-100">
-        <Sidebar />
-        <main className="ml-60 min-h-screen">
-          <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
-        </main>
+        <AuthProvider>
+          <Sidebar />
+          <main className="ml-60 min-h-screen">
+            <div className="mx-auto max-w-7xl px-6 py-8">{children}</div>
+          </main>
+        </AuthProvider>
       </body>
     </html>
   );

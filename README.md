@@ -2,7 +2,7 @@
 
 **A feature flag and experimentation platform built for resume-grade systems work.**
 
-Rollout is a LaunchDarkly/Optimizely-style system for safely shipping features, running experiments, and analyzing impact. The live free deployment path uses `Vercel Hobby + Supabase Free`, while the repo also contains a deeper Go-based control plane and local multi-service architecture for systems-focused iteration.
+Rollout is a LaunchDarkly/Optimizely-style system for safely shipping features, running experiments, and analyzing impact. The live free deployment path uses `Vercel Hobby + Supabase Free`: visitors can inspect a public demo workspace immediately, and signed-in users get their own isolated workspace with persistent flags and environments. The repo also contains a deeper Go-based control plane and local multi-service architecture for systems-focused iteration.
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
@@ -66,6 +66,7 @@ All evaluations happen locally in-process — no network calls in the hot path.
 
 ### Infrastructure
 - **Supabase-backed demo deployment** — Strictly free hosted path using Supabase Postgres plus an Edge Function-backed demo API
+- **Authenticated workspaces** — Supabase Auth provisions private projects with default environments and RLS-isolated data
 - **Edge Relay** — Lightweight Go binary that caches rules locally and evaluates flags at the edge (< 5ms p99)
 - **Streaming Updates** — Server-Sent Events (SSE) for real-time config propagation to SDKs and relays
 - **Event Ingestion Pipeline** — Buffered batch inserts into ClickHouse via NATS for the local/distributed architecture track
@@ -146,6 +147,8 @@ rollout/
 - Data and demo API: Supabase Free
 - Current Supabase demo function: `https://wvfosrbrbkqugrkpunhk.supabase.co/functions/v1/rollout-data`
 - Production dashboard: `https://dashboard-rho-roan.vercel.app`
+- Public visitors see a neutral read-only demo workspace.
+- Signed-in users get their own workspace, default environments, persistent flag creation, environment creation, rollout updates, kill-switch updates, targeting-rule updates, and audit logs.
 
 ### Rebuild the hosted demo data
 

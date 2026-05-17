@@ -10,6 +10,7 @@ import {
   Tag,
   ToggleLeft,
   ToggleRight,
+  Save,
 } from "lucide-react";
 import { Badge } from "@/components/Badge";
 import { RolloutSlider } from "@/components/RolloutSlider";
@@ -31,13 +32,16 @@ export default function FlagDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
-  const { data } = useDemoData();
+  const { data, isAuthenticated, updateFlagEnvironment } = useDemoData();
   const flag = data.flags.find((entry) => entry.id === id) ?? data.flags[0];
 
   const [selectedEnv, setSelectedEnv] = useState("env-3");
   const [draftsByEnvironment, setDraftsByEnvironment] = useState<
     Record<string, EnvironmentDraft>
   >({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveMessage, setSaveMessage] = useState<string | null>(null);
 
   const resolvedSelectedEnv =
     flag?.environments[selectedEnv] != null
@@ -71,6 +75,41 @@ export default function FlagDetailPage({
 
   function handleEnvSwitch(envId: string) {
     setSelectedEnv(envId);
+    setSaveError(null);
+    setSaveMessage(null);
+  }
+
+  async function handleSave() {
+    if (!flag || !resolvedSelectedEnv) return;
+    setSaveError(null);
+    setSaveMessage(null);
+
+    if (!isAuthenticated) {
+      setSaveError("Sign in to save changes to your own workspace.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      await updateFlagEnvironment({
+        flagId: flag.id,
+        environmentId: resolvedSelectedEnv,
+        enabled: activeDraft.enabled,
+        rolloutPercentage: activeDraft.rollout,
+        targetingRules: activeDraft.rules,
+        killSwitchActive: activeDraft.killActive,
+      });
+      setDraftsByEnvironment((current) => {
+        const next = { ...current };
+        delete next[resolvedSelectedEnv];
+        return next;
+      });
+      setSaveMessage("Saved changes.");
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : "Unable to save changes");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   return (
@@ -193,6 +232,13 @@ export default function FlagDetailPage({
                 </div>
               </div>
 
+              {!isAuthenticated && (
+                <div className="mt-4 rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-3 text-sm text-yellow-200">
+                  Public demo changes are local only. Sign in to persist flag
+                  updates.
+                </div>
+              )}
+
               {activeDraft.killActive && (
                 <div className="mt-4 rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-sm text-red-300">
                   Kill switch is active. All users are receiving the off
@@ -227,6 +273,38 @@ export default function FlagDetailPage({
                 onChange={(rules) => updateDraft({ rules })}
               />
             </div>
+
+            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/50 p-4">
+              <div>
+                <p className="text-sm font-medium text-zinc-200">
+                  Persist environment changes
+                </p>
+                <p className="text-xs text-zinc-500">
+                  Saves status, rollout percentage, kill switch, and targeting
+                  rules.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => void handleSave()}
+                disabled={isSaving}
+                className="flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Save className="h-4 w-4" />
+                {isSaving ? "Saving..." : "Save"}
+              </button>
+            </div>
+
+            {saveError && (
+              <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
+                {saveError}
+              </div>
+            )}
+            {saveMessage && (
+              <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-3 text-sm text-emerald-300">
+                {saveMessage}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}

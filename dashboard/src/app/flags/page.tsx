@@ -11,12 +11,15 @@ import { useDemoData } from "@/lib/use-demo-data";
 const FLAG_TYPES: FlagType[] = ["boolean", "string", "number", "json"];
 
 export default function FlagsPage() {
-  const { data } = useDemoData();
+  const { data, updateFlagEnvironment } = useDemoData();
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<FlagType | "all">("all");
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [showArchived, setShowArchived] = useState(false);
   const flags = data.flags;
+  const productionEnvironment =
+    data.environments.find((environment) => environment.production) ??
+    data.environments[data.environments.length - 1];
 
   const allTags = useMemo(() => {
     const tags = new Set<string>();
@@ -152,7 +155,24 @@ export default function FlagsPage() {
       {/* Flag list */}
       <div className="grid grid-cols-1 gap-4">
         {filtered.map((flag) => (
-          <FlagCard key={flag.id} flag={flag} />
+          <FlagCard
+            key={flag.id}
+            flag={flag}
+            productionEnvironmentId={productionEnvironment?.id}
+            onToggle={(flagId, envId, enabled) => {
+              const current = flag.environments[envId];
+              void updateFlagEnvironment({
+                flagId,
+                environmentId: envId,
+                enabled,
+                rolloutPercentage: enabled
+                  ? Math.max(current?.rolloutPercentage ?? 0, 100)
+                  : current?.rolloutPercentage ?? 0,
+                targetingRules: current?.targetingRules ?? [],
+                killSwitchActive: current?.killSwitchActive ?? false,
+              }).catch(() => undefined);
+            }}
+          />
         ))}
       </div>
 

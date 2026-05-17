@@ -9,7 +9,10 @@ import {
   History,
   Settings,
   LayoutDashboard,
+  LogIn,
+  LogOut,
 } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   { href: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -22,6 +25,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
@@ -66,8 +70,40 @@ export default function Sidebar() {
       </nav>
 
       {/* Footer */}
-      <div className="border-t border-zinc-800 px-5 py-4">
-        <p className="text-xs text-zinc-500">Rollout v1.0.0</p>
+      <div className="border-t border-zinc-800 px-4 py-4">
+        {user ? (
+          <div className="space-y-3">
+            <div>
+              <p className="truncate text-sm font-medium text-zinc-200">
+                {user.user_metadata?.name ?? user.email}
+              </p>
+              <p className="truncate text-xs text-zinc-500">{user.email}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void signOut()}
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-sm text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-zinc-100"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium text-zinc-200">Public demo</p>
+              <p className="text-xs text-zinc-500">Read-only sample workspace</p>
+            </div>
+            <Link
+              href="/login"
+              className="flex w-full items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+            >
+              <LogIn className="h-4 w-4" />
+              Sign in
+            </Link>
+          </div>
+        )}
+        <p className="mt-4 text-xs text-zinc-600">Rollout v1.0.0</p>
       </div>
     </aside>
   );

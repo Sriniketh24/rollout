@@ -1,6 +1,6 @@
 insert into public.users (id, email, name, role, api_key, created_at)
 values
-  ('66666666-6666-6666-6666-666666666661', 'sriniketh@example.com', 'Sriniketh', 'owner', 'rol_demo_owner_key', '2026-05-08T02:19:54.645629+00:00'),
+  ('66666666-6666-6666-6666-666666666661', 'demo-admin@rollout.dev', 'Demo Admin', 'owner', 'rol_demo_owner_key', '2026-05-08T02:19:54.645629+00:00'),
   ('66666666-6666-6666-6666-666666666662', 'pm@example.com', 'Ava Product', 'editor', 'rol_demo_pm_key', '2026-05-08T02:19:54.645629+00:00')
 on conflict (id) do update
 set
@@ -387,7 +387,7 @@ values
     '22222222-2222-2222-2222-222222222223',
     'flag.updated',
     '66666666-6666-6666-6666-666666666661',
-    'sriniketh@example.com',
+    'demo-admin@rollout.dev',
     'flag',
     '33333333-3333-3333-3333-333333333331',
     '{"rolloutPercentage":50}'::jsonb,
@@ -400,7 +400,7 @@ values
     '22222222-2222-2222-2222-222222222223',
     'targeting.updated',
     '66666666-6666-6666-6666-666666666661',
-    'sriniketh@example.com',
+    'demo-admin@rollout.dev',
     'flag',
     '33333333-3333-3333-3333-333333333331',
     null,
@@ -413,7 +413,7 @@ values
     '22222222-2222-2222-2222-222222222223',
     'rollout.updated',
     '66666666-6666-6666-6666-666666666661',
-    'sriniketh@example.com',
+    'demo-admin@rollout.dev',
     'flag',
     '33333333-3333-3333-3333-333333333332',
     '{"rolloutPercentage":0}'::jsonb,

@@ -8,12 +8,15 @@ import type { Flag } from "@/lib/types";
 
 interface FlagCardProps {
   flag: Flag;
+  productionEnvironmentId?: string;
   onToggle?: (flagId: string, envId: string, enabled: boolean) => void;
 }
 
-export function FlagCard({ flag, onToggle }: FlagCardProps) {
+export function FlagCard({ flag, productionEnvironmentId, onToggle }: FlagCardProps) {
   const envEntries = Object.entries(flag.environments);
-  const prodEnv = envEntries.find(([, cfg]) => cfg.environmentId === "env-3");
+  const prodEnv =
+    envEntries.find(([, cfg]) => cfg.environmentId === productionEnvironmentId) ??
+    envEntries[envEntries.length - 1];
   const isProdEnabled = prodEnv ? prodEnv[1].enabled : false;
 
   const [toggling, setToggling] = useState(false);

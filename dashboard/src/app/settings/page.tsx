@@ -16,10 +16,13 @@ import {
   Settings as SettingsIcon,
 } from "lucide-react";
 import { Badge } from "@/components/Badge";
-import { mockProject, mockUsers } from "@/lib/mock-data";
 import type { UserRole } from "@/lib/types";
+import { useAuth } from "@/lib/auth-context";
+import { useDemoData } from "@/lib/use-demo-data";
 
 export default function SettingsPage() {
+  const { user } = useAuth();
+  const { data, isDemo } = useDemoData();
   const [showApiKey, setShowApiKey] = useState(false);
   const [showServerKey, setShowServerKey] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -48,6 +51,29 @@ export default function SettingsPage() {
     viewer: "default",
   };
 
+  const project = data.project;
+  const users = user
+    ? [
+        {
+          id: user.id,
+          name: user.user_metadata?.name ?? user.email ?? "Workspace user",
+          email: user.email ?? "",
+          role: "owner" as UserRole,
+          createdAt: user.created_at,
+          lastLogin: user.last_sign_in_at,
+        },
+      ]
+    : [
+        {
+          id: "demo-admin",
+          name: "Demo Admin",
+          email: "demo@example.com",
+          role: "owner" as UserRole,
+          createdAt: project.createdAt,
+          lastLogin: project.updatedAt,
+        },
+      ];
+
   return (
     <div className="space-y-8 max-w-4xl">
       <div>
@@ -65,7 +91,10 @@ export default function SettingsPage() {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-zinc-100">Project</h2>
-            <p className="text-sm text-zinc-400">{mockProject.description}</p>
+            <p className="text-sm text-zinc-400">
+              {project.description}
+              {isDemo ? " Public demo workspace." : ""}
+            </p>
           </div>
         </div>
 
@@ -76,7 +105,7 @@ export default function SettingsPage() {
             </label>
             <input
               type="text"
-              defaultValue={mockProject.name}
+              defaultValue={project.name}
               className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-100 focus:border-blue-500/50 focus:outline-none"
             />
           </div>
@@ -86,7 +115,7 @@ export default function SettingsPage() {
             </label>
             <input
               type="text"
-              value={mockProject.key}
+              value={project.key}
               disabled
               className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-3 py-2.5 text-sm text-zinc-500 font-mono"
             />
@@ -123,7 +152,7 @@ export default function SettingsPage() {
           </p>
           <div className="flex items-center gap-2">
             <code className="flex-1 rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-zinc-300 font-mono">
-              {showApiKey ? mockProject.apiKey : maskKey(mockProject.apiKey)}
+              {showApiKey ? project.apiKey : maskKey(project.apiKey)}
             </code>
             <button
               onClick={() => setShowApiKey(!showApiKey)}
@@ -136,7 +165,7 @@ export default function SettingsPage() {
               )}
             </button>
             <button
-              onClick={() => copyToClipboard(mockProject.apiKey, "client")}
+              onClick={() => copyToClipboard(project.apiKey, "client")}
               className="rounded-lg p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
             >
               {copiedKey === "client" ? (
@@ -164,8 +193,8 @@ export default function SettingsPage() {
           <div className="flex items-center gap-2">
             <code className="flex-1 rounded-lg bg-zinc-900 border border-zinc-800 px-3 py-2 text-sm text-zinc-300 font-mono">
               {showServerKey
-                ? mockProject.serverApiKey
-                : maskKey(mockProject.serverApiKey)}
+                ? project.serverApiKey
+                : maskKey(project.serverApiKey)}
             </code>
             <button
               onClick={() => setShowServerKey(!showServerKey)}
@@ -179,7 +208,7 @@ export default function SettingsPage() {
             </button>
             <button
               onClick={() =>
-                copyToClipboard(mockProject.serverApiKey, "server")
+                copyToClipboard(project.serverApiKey, "server")
               }
               className="rounded-lg p-2 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800 transition-colors"
             >
@@ -210,7 +239,7 @@ export default function SettingsPage() {
                 Team Members
               </h2>
               <p className="text-sm text-zinc-400">
-                {mockUsers.length} member{mockUsers.length !== 1 ? "s" : ""}
+                {users.length} member{users.length !== 1 ? "s" : ""}
               </p>
             </div>
           </div>
@@ -220,11 +249,11 @@ export default function SettingsPage() {
         </div>
 
         <div className="divide-y divide-zinc-800">
-          {mockUsers.map((user) => {
-            const RoleIcon = roleIcons[user.role];
+          {users.map((member) => {
+            const RoleIcon = roleIcons[member.role];
             return (
               <div
-                key={user.id}
+                key={member.id}
                 className="flex items-center justify-between py-4"
               >
                 <div className="flex items-center gap-3">
@@ -233,20 +262,20 @@ export default function SettingsPage() {
                   </div>
                   <div>
                     <p className="text-sm font-medium text-zinc-200">
-                      {user.name}
+                      {member.name}
                     </p>
-                    <p className="text-xs text-zinc-500">{user.email}</p>
+                    <p className="text-xs text-zinc-500">{member.email}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Badge variant={roleVariants[user.role]}>
+                  <Badge variant={roleVariants[member.role]}>
                     <RoleIcon className="h-3 w-3 mr-1" />
-                    {user.role}
+                    {member.role}
                   </Badge>
-                  {user.lastLogin && (
+                  {member.lastLogin && (
                     <span className="text-xs text-zinc-500">
                       Last login{" "}
-                      {new Date(user.lastLogin).toLocaleDateString()}
+                      {new Date(member.lastLogin).toLocaleDateString()}
                     </span>
                   )}
                 </div>

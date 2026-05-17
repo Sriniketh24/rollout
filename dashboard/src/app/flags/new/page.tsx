@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, Flag } from "lucide-react";
 import type { FlagType } from "@/lib/types";
+import { useDemoData } from "@/lib/use-demo-data";
 
 const FLAG_TYPES: { value: FlagType; label: string; description: string }[] = [
   { value: "boolean", label: "Boolean", description: "Simple on/off toggle" },
@@ -21,6 +22,7 @@ interface Variation {
 
 export default function NewFlagPage() {
   const router = useRouter();
+  const { createFlag, isAuthenticated } = useDemoData();
   const [key, setKey] = useState("");
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -31,6 +33,8 @@ export default function NewFlagPage() {
     { key: "off", value: "false", name: "Disabled" },
   ]);
   const [defaultVariation, setDefaultVariation] = useState("off");
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   function handleNameChange(val: string) {
     setName(val);
@@ -60,9 +64,37 @@ export default function NewFlagPage() {
     );
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    router.push("/flags");
+    setError(null);
+
+    if (!isAuthenticated) {
+      setError("Sign in to create persistent flags in your own workspace.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const flagId = await createFlag({
+        key,
+        name,
+        description,
+        type,
+        tags: tags
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter(Boolean),
+        variations,
+        defaultVariation,
+      });
+      router.push(`/flags/${flagId}`);
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error ? submitError.message : "Unable to create flag"
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -88,6 +120,13 @@ export default function NewFlagPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
+        {!isAuthenticated && (
+          <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/10 p-4 text-sm text-yellow-200">
+            You are viewing the public demo. Sign in to create flags that persist
+            in your own workspace.
+          </div>
+        )}
+
         {/* Basic info */}
         <div className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-6 space-y-4">
           <h2 className="text-lg font-semibold text-zinc-100">Basic Information</h2>
@@ -244,6 +283,12 @@ export default function NewFlagPage() {
         </div>
 
         {/* Submit */}
+        {error && (
+          <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
         <div className="flex items-center justify-end gap-3">
           <Link
             href="/flags"
@@ -253,9 +298,10 @@ export default function NewFlagPage() {
           </Link>
           <button
             type="submit"
-            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+            disabled={isSubmitting}
+            className="rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            Create Flag
+            {isSubmitting ? "Creating..." : "Create Flag"}
           </button>
         </div>
       </form>

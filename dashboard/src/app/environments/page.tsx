@@ -16,7 +16,7 @@ import type { Environment } from "@/lib/types";
 import { useDemoData } from "@/lib/use-demo-data";
 
 export default function EnvironmentsPage() {
-  const { data } = useDemoData();
+  const { data, createEnvironment, isAuthenticated } = useDemoData();
   const [draftEnvironments, setDraftEnvironments] =
     useState<Environment[] | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -25,10 +25,42 @@ export default function EnvironmentsPage() {
   const [newColor, setNewColor] = useState("#3b82f6");
   const [newDescription, setNewDescription] = useState("");
   const [newProduction, setNewProduction] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const environments = draftEnvironments ?? data.environments;
 
-  function handleCreate(e: React.FormEvent) {
+  async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
+    setError(null);
+
+    if (isAuthenticated) {
+      setIsSubmitting(true);
+      try {
+        await createEnvironment({
+          key: newKey,
+          name: newName,
+          color: newColor,
+          description: newDescription,
+          production: newProduction,
+        });
+        setShowCreate(false);
+        setNewName("");
+        setNewKey("");
+        setNewColor("#3b82f6");
+        setNewDescription("");
+        setNewProduction(false);
+      } catch (submitError) {
+        setError(
+          submitError instanceof Error
+            ? submitError.message
+            : "Unable to create environment"
+        );
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
     const env: Environment = {
       id: `env-${Date.now()}`,
       key: newKey,
@@ -241,6 +273,11 @@ export default function EnvironmentsPage() {
               </div>
 
               <div className="flex justify-end gap-3 mt-6">
+                {error && (
+                  <div className="mr-auto max-w-52 text-sm text-red-300">
+                    {error}
+                  </div>
+                )}
                 <button
                   type="button"
                   onClick={() => setShowCreate(false)}
@@ -250,9 +287,10 @@ export default function EnvironmentsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500"
+                  disabled={isSubmitting}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Create
+                  {isSubmitting ? "Creating..." : "Create"}
                 </button>
               </div>
             </form>

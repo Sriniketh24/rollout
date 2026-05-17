@@ -15,6 +15,9 @@ import { useDemoData } from "@/lib/use-demo-data";
 export default function DashboardPage() {
   const { data } = useDemoData();
   const { flags, experiments, environments, auditEntries } = data;
+  const productionEnvironment =
+    environments.find((environment) => environment.production) ??
+    environments[environments.length - 1];
   const stats = [
     {
       label: "Feature Flags",
@@ -99,7 +102,9 @@ export default function DashboardPage() {
           </div>
           <div className="space-y-3">
             {flags.slice(0, 4).map((flag) => {
-              const prodEnv = flag.environments["env-3"];
+              const prodEnv = productionEnvironment
+                ? flag.environments[productionEnvironment.id]
+                : undefined;
               const isEnabled = prodEnv?.enabled ?? false;
               return (
                 <Link key={flag.id} href={`/flags/${flag.id}`}>
